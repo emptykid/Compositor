@@ -37,7 +37,7 @@ struct PSDConversionSheet: View {
                 List(request.conversions) { item in
                     VStack(alignment: .leading, spacing: 4) {
                         Text(item.layerName).font(.headline)
-                        Text(item.message)
+                        Text(L10n.string(item.message))
                     }.padding(.vertical, 4)
                 }
                 .frame(minHeight: 180)
@@ -45,7 +45,7 @@ struct PSDConversionSheet: View {
             HStack {
                 Spacer()
                 Button("Cancel") { finish(false) }.keyboardShortcut(.cancelAction)
-                Button(request.confirmTitle) { finish(true) }.keyboardShortcut(.defaultAction)
+                Button(L10n.string(request.confirmTitle)) { finish(true) }.keyboardShortcut(.defaultAction)
                     .disabled(request.isReading)
             }
         }

@@ -1,4 +1,12 @@
-# Compositor
+# Compositor · Simplified Chinese
+
+[English](README.md) | [简体中文](README.zh-CN.md)
+
+This repository is an independently maintained **Simplified Chinese localization fork** of [robbietilton/Compositor](https://github.com/robbietilton/Compositor), created by Robbie Tilton. It follows upstream features and version numbers; changes here are limited to localization and the packaging needed to distribute the Chinese edition. It is not an official upstream release.
+
+The current Chinese edition is **1.4.9 (build 44)**, based on upstream [v1.4.9](https://github.com/robbietilton/Compositor/releases/tag/v1.4.9), commit `0ab3ff5`. Future versions will follow upstream as they are merged and their translations are verified; synchronization is maintained manually.
+
+The following describes the original project's purpose and features:
 
 Adobe Photoshop costs too much and tools like GIMP don’t feel familiar enough for me to stay in flow. That’s why I built Compositor.
 
@@ -9,9 +17,17 @@ Because it’s open source, you can download the Xcode project and add, remove, 
 ## Installation
 
 ### Download
-Get Compositor from [robbietilton.com/compositor](https://robbietilton.com/compositor), or download the latest release directly from [GitHub Releases](https://github.com/robbietilton/Compositor/releases/latest).
+Download the Chinese edition from [this fork's GitHub Releases](https://github.com/emptykid/Compositor/releases/latest). Open the DMG and drag `Compositor.app` into Applications.
 
-### Homebrew
+The app includes English and Simplified Chinese and follows macOS language preferences. To select Chinese just for this app, use **System Settings > General > Language & Region > Applications > Compositor > Simplified Chinese**, then quit and reopen it.
+
+This fork uses its own signed update feed. Upstream downloads and Homebrew packages install the original edition, not this Chinese fork. See each release's notes for its signing and notarization status.
+
+The current Chinese 1.4.9 package is Developer ID signed but **not Apple notarized**. macOS may block its first launch; see [Apple's guidance](https://support.apple.com/102445) or build from source.
+
+### Original edition (upstream)
+
+The original edition is available from [robbietilton.com/compositor](https://robbietilton.com/compositor), [upstream GitHub Releases](https://github.com/robbietilton/Compositor/releases/latest), or Homebrew:
 
 ```sh
 brew install --cask robbietilton-compositor
@@ -76,7 +92,7 @@ brew install --cask robbietilton-compositor
 - Keep working while a project saves
 - Photoshop-style keyboard shortcuts throughout, remappable in Edit > Keyboard Shortcuts
 - Drag a number's label to scrub its value, as in Photoshop
-- Automatic updates, signed and notarized
+- Automatic updates through this fork’s signed update feed; see release notes for notarization status
 
 ### Works with AI agents
 - AI agents and scripts can build and edit projects directly: a `.comp` is a folder of PNG layers and a manifest, and an open project updates live as it's written. See [Writing Compositor projects](docs/writing-comp-files.md)
@@ -88,7 +104,7 @@ brew install --cask robbietilton-compositor
 
 ## Translations
 
-Compositor is English only for now, and translation pull requests aren't being accepted. It's maintained by one person, every new string would need translating from then on, and translations in languages I don't read can't be reviewed. I'll revisit this once the app settles; until then, please don't open localization PRs.
+This branch supports English and Simplified Chinese, following the macOS language preference for the app. Read the [中文说明](README.zh-CN.md) for the fork’s scope and installation instructions. See [Localization](docs/localization.md) for translation and validation instructions. Upstream currently does not accept localization pull requests; these translations are maintained in this branch.
 
 ## Building
 
@@ -96,14 +112,19 @@ Open `Compositor.xcodeproj` and run the **Compositor** scheme.
 
 ## Releasing
 
-`scripts/release.sh` builds a Release version, signs it with Developer ID, notarizes and staples it, and packages it into `dist/Compositor-<version>.dmg`.
+Keep `MARKETING_VERSION` and `CURRENT_PROJECT_VERSION` aligned with the upstream release being localized. This fork publishes tags such as `v1.4.9` in its own repository; it does not modify upstream tags or releases.
 
-It needs, all kept outside this repository:
+`scripts/release.sh` builds a Release version, signs it with your Developer ID certificate, notarizes it, and packages it as `dist/Compositor-<version>.dmg`. It needs a Developer ID Application certificate and a `notarytool` credential profile in your local keychain. Credentials and private keys stay outside this repository. `create-dmg` is optional; the script falls back to `hdiutil`.
 
-- a **Developer ID Application** certificate in the login keychain
-- notarization credentials saved with `xcrun notarytool store-credentials "compositor-notary" …`
-- [`create-dmg`](https://github.com/create-dmg/create-dmg) (`brew install create-dmg`)
+```sh
+RELEASE_TEAM=<your-team-id> NOTARY_PROFILE=<your-keychain-profile> ./scripts/release.sh
+RELEASE_NOTES_FILE=RELEASE_NOTES.md ./scripts/publish.sh
+```
+
+For an explicitly documented, signed but **not notarized** release, set `SKIP_NOTARIZATION=1` when building. Such a release may be blocked by macOS Gatekeeper on first launch; it must not be described as notarized.
+
+The publish script targets **emptykid/Compositor**, uses the Sparkle signing key stored under account `emptykid.Compositor`, uploads a draft release, publishes this fork’s `appcast.xml`, and then makes the release public. Commit and push all source and documentation changes before publishing.
 
 ## License
 
-MIT — see [LICENSE](LICENSE).
+MIT — see [LICENSE](LICENSE). The original application is by [Robbie Tilton and upstream contributors](https://github.com/robbietilton/Compositor). This fork maintains the Simplified Chinese localization.

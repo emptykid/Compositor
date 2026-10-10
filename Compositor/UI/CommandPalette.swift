@@ -19,7 +19,7 @@ struct CommandPaletteEntry: Identifiable {
     init(id: String, title: String? = nil, shortcut: String?, isEnabled: Bool, isOn: Bool = false,
          perform: @escaping @MainActor () -> Void) {
         self.id = id
-        self.title = title ?? id
+        self.title = L10n.string(title ?? id)
         self.shortcut = shortcut
         self.isEnabled = isEnabled
         self.isOn = isOn
@@ -216,7 +216,8 @@ extension CommandPaletteEntry {
             ("Zoom", "Z", .zoom, nil),
         ]
         return tools.map { name, key, tool, setup in
-            CommandPaletteEntry(id: "Tool › \(name)", shortcut: key, isEnabled: session.document != nil,
+            CommandPaletteEntry(id: "Tool › \(name)", title: "\(L10n.string("Tool")) › \(L10n.string(name))",
+                                shortcut: key, isEnabled: session.document != nil,
                                 perform: { [weak session] in
                                     guard let session else { return }
                                     session.selectTool(tool)

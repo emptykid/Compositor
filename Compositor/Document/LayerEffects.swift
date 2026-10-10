@@ -270,7 +270,7 @@ extension EditorSession {
             effects.innerGlow = InnerGlowEffect()
         default: break
         }
-        setEffects(effects, on: id, name: "Add " + kind.rawValue)
+        setEffects(effects, on: id, name: String(localized: "Add \(L10n.string(kind.rawValue))"))
         selectEffect(kind, on: id, editing: true)
         effectsEditingOriginal = original
     }
@@ -305,7 +305,7 @@ extension EditorSession {
             case .outerGlow: effects.outerGlow = original.outerGlow
             case .innerGlow: effects.innerGlow = original.innerGlow
             }
-            setEffects(effects, on: editing.layerID, name: "Cancel " + editing.kind.rawValue)
+            setEffects(effects, on: editing.layerID, name: String(localized: "Cancel \(L10n.string(editing.kind.rawValue))"))
         }
         effectsEditing = nil
         effectsEditingOriginal = nil
@@ -330,7 +330,7 @@ extension EditorSession {
               layer.effects?.contains(editing.kind) == true else { return }
         var effects = layer.effects ?? LayerEffects()
         change(&effects)
-        setEffects(effects, on: layer.id, name: "Edit " + editing.kind.rawValue)
+        setEffects(effects, on: layer.id, name: String(localized: "Edit \(L10n.string(editing.kind.rawValue))"))
     }
 
     func canCopyEffect(_ kind: LayerEffectKind, from source: UUID, to target: UUID) -> Bool {
@@ -357,7 +357,7 @@ extension EditorSession {
         case .outerGlow: effects.outerGlow = original.outerGlow
         case .innerGlow: effects.innerGlow = original.innerGlow
         }
-        setEffects(effects, on: target, name: "Copy " + kind.rawValue)
+        setEffects(effects, on: target, name: String(localized: "Copy \(L10n.string(kind.rawValue))"))
         selectEffect(kind, on: target)
     }
 
@@ -365,7 +365,7 @@ extension EditorSession {
         guard var effects = document?.layers.first(where: { $0.id == id })?.effects else { return }
         let enabled = effects.isEnabled(kind)
         effects.setEnabled(!enabled, for: kind)
-        setEffects(effects, on: id, name: (enabled ? "Hide " : "Show ") + kind.rawValue)
+        setEffects(effects, on: id, name: enabled ? String(localized: "Hide \(L10n.string(kind.rawValue))") : String(localized: "Show \(L10n.string(kind.rawValue))"))
     }
 
     func removeSelectedEffect() {
@@ -377,7 +377,7 @@ extension EditorSession {
             effectsEditingOriginal = nil
         }
         effects.remove(selectedEffect.kind)
-        setEffects(effects, on: selectedEffect.layerID, name: "Remove " + selectedEffect.kind.rawValue)
+        setEffects(effects, on: selectedEffect.layerID, name: String(localized: "Remove \(L10n.string(selectedEffect.kind.rawValue))"))
         effectSelection = nil
     }
 }

@@ -43,6 +43,9 @@ jobs:
           -derivedDataPath DerivedData
           CODE_SIGN_IDENTITY=-
 
+      - name: Validate English and Chinese translations
+        run: python3 scripts/check-localizations.py --derived-data DerivedData
+
       # These two suites show real windows and time them, so they run alone after the rest.
       - name: Run unit tests in parallel
         run: >
@@ -52,6 +55,7 @@ jobs:
           -destination 'platform=macOS,arch=arm64'
           -derivedDataPath DerivedData
           -resultBundlePath ParallelResults.xcresult
+          -testLanguage en -testRegion US
           -parallel-testing-enabled YES
           -skip-testing:CompositorTests/FloatingPanelTests
           -skip-testing:CompositorTests/SliderSnapTests
@@ -65,9 +69,24 @@ jobs:
           -destination 'platform=macOS,arch=arm64'
           -derivedDataPath DerivedData
           -resultBundlePath SerialResults.xcresult
+          -testLanguage en -testRegion US
           -parallel-testing-enabled NO
           -only-testing:CompositorTests/FloatingPanelTests
           -only-testing:CompositorTests/SliderSnapTests
+
+      - name: Run Chinese localization and panel tests
+        if: ${{ !cancelled() && steps.build.outcome == 'success' }}
+        run: >
+          xcodebuild test-without-building
+          -project Compositor.xcodeproj
+          -scheme Compositor
+          -destination 'platform=macOS,arch=arm64'
+          -derivedDataPath DerivedData
+          -resultBundlePath ChineseResults.xcresult
+          -testLanguage zh-Hans -testRegion CN
+          -parallel-testing-enabled NO
+          -only-testing:CompositorTests/LocalizationTests
+          -only-testing:CompositorTests/FloatingPanelTests
 
       - name: Upload test results
         if: failure()

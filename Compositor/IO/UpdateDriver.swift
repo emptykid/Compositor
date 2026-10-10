@@ -21,18 +21,18 @@ import Sparkle
         let downloaded = state.stage != .notDownloaded
         let alert = NSAlert()
         alert.icon = NSApp.applicationIconImage
-        alert.messageText = "A new version of \(name) is available!"
+        alert.messageText = String(localized: "A new version of \(name) is available!")
         alert.informativeText = downloaded
-            ? "\(name) \(appcastItem.displayVersionString) is ready to install — you have \(current)."
-            : "\(name) \(appcastItem.displayVersionString) is now available — you have \(current). Would you like to download it now?"
+            ? String(localized: "\(name) \(appcastItem.displayVersionString) is ready to install — you have \(current).")
+            : String(localized: "\(name) \(appcastItem.displayVersionString) is now available — you have \(current). Would you like to download it now?")
         let changes = Self.changes(in: appcastItem)
         if !changes.isEmpty { alert.accessoryView = Self.list(changes) }
-        alert.addButton(withTitle: downloaded ? "Install and Relaunch" : "Install Update")
-        alert.addButton(withTitle: "Remind Me Later")
-        alert.addButton(withTitle: "Skip This Version")
+        alert.addButton(withTitle: L10n.string(downloaded ? "Install and Relaunch" : "Install Update"))
+        alert.addButton(withTitle: String(localized: "Remind Me Later"))
+        alert.addButton(withTitle: String(localized: "Skip This Version"))
         if let updater, updater.allowsAutomaticUpdates {
             alert.showsSuppressionButton = true
-            alert.suppressionButton?.title = "Automatically download and install updates in the future"
+            alert.suppressionButton?.title = String(localized: "Automatically download and install updates in the future")
             alert.suppressionButton?.state = updater.automaticallyDownloadsUpdates ? .on : .off
         }
         alert.layout()
@@ -91,7 +91,7 @@ import Sparkle
         style.headIndent = 12
         style.paragraphSpacing = 4
         style.tabStops = [NSTextTab(textAlignment: .left, location: 12)]
-        let text = NSMutableAttributedString(string: "What’s new\n", attributes: [
+        let text = NSMutableAttributedString(string: String(localized: "What’s new\n"), attributes: [
             .font: NSFont.systemFont(ofSize: NSFont.smallSystemFontSize, weight: .semibold),
             .foregroundColor: NSColor.labelColor, .paragraphStyle: style,
         ])

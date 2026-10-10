@@ -14,8 +14,8 @@ struct ColorRangeSheet: View {
                         // Holding Shift or Option lights up the eyedropper a click will use.
                         .background(edit?.effectiveMode == mode ? Color.accentColor.opacity(0.25) : .clear,
                                     in: RoundedRectangle(cornerRadius: 4))
-                        .help(help(mode))
-                        .accessibilityLabel("\(mode.rawValue) color")
+                        .help(L10n.string(help(mode)))
+                        .accessibilityLabel("\(L10n.string(mode.rawValue)) color")
                 }
                 Spacer()
             }

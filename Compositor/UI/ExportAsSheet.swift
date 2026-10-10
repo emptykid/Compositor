@@ -81,7 +81,7 @@ struct ExportAsSheet: View {
                 GridRow {
                     Text("Format")
                     Picker("Format", selection: $format) {
-                        ForEach(ExportFormat.allCases, id: \.self) { Text($0.rawValue).tag($0) }
+                        ForEach(ExportFormat.allCases, id: \.self) { Text(L10n.string($0.rawValue)).tag($0) }
                     }
                     .pickerStyle(.segmented).labelsHidden().fixedSize()
                 }
