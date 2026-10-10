@@ -23,7 +23,7 @@ The app includes English and Simplified Chinese and follows macOS language prefe
 
 This fork uses its own signed update feed. Upstream downloads and Homebrew packages install the original edition, not this Chinese fork. See each release's notes for its signing and notarization status.
 
-The current Chinese 1.4.9 package is Developer ID signed but **not Apple notarized**. macOS may block its first launch; see [Apple's guidance](https://support.apple.com/102445) or build from source.
+The current Chinese 1.4.9 app and DMG are **Developer ID signed and Apple notarized**, with the notarization tickets stapled to both. The package was updated after the initial release to include notarization; its application version remains 1.4.9 (build 44).
 
 ### Original edition (upstream)
 
@@ -114,7 +114,7 @@ Open `Compositor.xcodeproj` and run the **Compositor** scheme.
 
 Keep `MARKETING_VERSION` and `CURRENT_PROJECT_VERSION` aligned with the upstream release being localized. This fork publishes tags such as `v1.4.9` in its own repository; it does not modify upstream tags or releases.
 
-`scripts/release.sh` builds a Release version, signs it with your Developer ID certificate, notarizes it, and packages it as `dist/Compositor-<version>.dmg`. It needs a Developer ID Application certificate and a `notarytool` credential profile in your local keychain. Credentials and private keys stay outside this repository. `create-dmg` is optional; the script falls back to `hdiutil`.
+`scripts/release.sh` builds a Release version, signs it with your Developer ID certificate, notarizes it, and packages it as `dist/Compositor-<version>.dmg`. It needs a Developer ID Application certificate and a `notarytool` credential profile in your local keychain. Credentials and private keys stay outside this repository. The maintainer’s local credential profile is `dm-notary`; use `NOTARY_PROFILE` to select another profile. `create-dmg` is optional; the script falls back to `hdiutil`.
 
 ```sh
 RELEASE_TEAM=<your-team-id> NOTARY_PROFILE=<your-keychain-profile> ./scripts/release.sh

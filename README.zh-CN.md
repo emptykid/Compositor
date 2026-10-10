@@ -20,7 +20,7 @@
 
 需要 **Apple 芯片 Mac、macOS 26.0 或更高版本**。安装包的签名和 Apple 公证状态以对应 Release 的说明为准。
 
-当前 1.4.9 中文安装包使用 Developer ID 签名，**尚未经过 Apple 公证**，首次打开可能被 macOS 拦截。请确认下载来源，按 [Apple 官方说明](https://support.apple.com/zh-cn/102445) 查看系统提示，或从源码构建。
+当前 1.4.9 中文应用与 DMG 均已完成 **Developer ID 签名和 Apple 公证**，并已附加公证票据。安装包在首次发布后补充了公证，应用版本仍为 **1.4.9（构建号 44）**；此前已下载未公证安装包的用户可重新下载。
 
 原项目官网、原项目 Releases 和 `brew install --cask robbietilton-compositor` 提供的是上游版本，并非本仓库维护的中文版。
 

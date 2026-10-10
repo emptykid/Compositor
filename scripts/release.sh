@@ -4,7 +4,7 @@
 # Needs, all kept out of this repository:
 #   - a "Developer ID Application" certificate in the login keychain
 #   - notarization credentials saved once with:
-#       xcrun notarytool store-credentials "compositor-zh-notary" --apple-id "…" --team-id "…"
+#       xcrun notarytool store-credentials "dm-notary" --apple-id "…" --team-id "…"
 #   - RELEASE_TEAM set to the team owning the signing certificate
 # Set SKIP_NOTARIZATION=1 only for a release documented as not notarized.
 # create-dmg is optional; hdiutil provides a plain DMG when it is not installed.
@@ -16,7 +16,7 @@ PROJECT_DIR="$(cd "$(dirname "$0")/.." && pwd)"
 APP=Compositor
 TEAM="${RELEASE_TEAM:?Set RELEASE_TEAM to the team owning your Developer ID certificate}"
 IDENTITY="${RELEASE_IDENTITY:-Developer ID Application}"
-NOTARY_PROFILE="${NOTARY_PROFILE:-compositor-zh-notary}"
+NOTARY_PROFILE="${NOTARY_PROFILE:-dm-notary}"
 SKIP_NOTARIZATION="${SKIP_NOTARIZATION:-0}"
 # Built outside Dropbox: the extended attributes it adds to files make code signing fail.
 WORK="$HOME/Library/Caches/CompositorChineseRelease"
@@ -58,6 +58,7 @@ if [[ "$SKIP_NOTARIZATION" == 0 ]]; then
   ditto -c -k --keepParent "$APP_PATH" "$WORK/$APP.zip"
   xcrun notarytool submit "$WORK/$APP.zip" --keychain-profile "$NOTARY_PROFILE" --wait
   xcrun stapler staple "$APP_PATH"
+  xcrun stapler validate "$APP_PATH"
 fi
 
 echo "==> Building the DMG window"
@@ -103,10 +104,12 @@ if [[ "$SKIP_NOTARIZATION" == 0 ]]; then
   echo "==> Notarizing the DMG"
   xcrun notarytool submit "$DMG" --keychain-profile "$NOTARY_PROFILE" --wait
   xcrun stapler staple "$DMG"
+  xcrun stapler validate "$DMG"
 
   echo "==> What Gatekeeper will say on another Mac"
   spctl --assess --type open --context context:primary-signature --verbose=2 "$DMG"
   spctl --assess --type execute --verbose=2 "$APP_PATH"
+  syspolicy_check distribution "$APP_PATH"
 else
   echo "==> Signed, not notarized. Include that status in the release notes."
 fi

@@ -20,7 +20,9 @@
 
 ## 签名与公证状态
 
-本次安装包及应用使用 **Developer ID 签名，但尚未经过 Apple 公证**。首次打开互联网下载的应用时，macOS 可能拦截启动。请先确认文件来自本仓库；相关提示和处理方式见 [Apple 官方说明](https://support.apple.com/zh-cn/102445)。也可以按 README 从源码构建。此版本不声称具备上游发行包的 Apple 公证状态。
+本次应用及 DMG 均已完成 **Developer ID 签名和 Apple 公证**，Apple 审核结果均为 `Accepted`，且已附加并验证公证票据。应用通过 macOS 分发检查（`syspolicy_check distribution`）。
+
+公证安装包在首次发布后补发，`Compositor.dmg` 与 `SHA256SUMS` 已同步更新。应用代码、版本 **1.4.9** 和构建号 **44** 保持不变；已下载早期未公证安装包的用户可重新下载当前文件。
 
 ## 验证
 
