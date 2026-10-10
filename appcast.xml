@@ -2,7 +2,18 @@
 <rss version="2.0" xmlns:sparkle="http://www.andymatuschak.org/xml-namespaces/sparkle">
   <channel>
     <title>Compositor 简体中文版</title>
-    <link>https://github.com/emptykid/Compositor/releases</link>
-    <description>Compositor 的简体中文发行版更新源。</description>
+    <item>
+      <title>Version 1.4.9</title>
+      <pubDate>Sat, 10 Oct 2026 08:43:16 +0000</pubDate>
+      <sparkle:version>44</sparkle:version>
+      <sparkle:shortVersionString>1.4.9</sparkle:shortVersionString>
+      <sparkle:minimumSystemVersion>26.0</sparkle:minimumSystemVersion>
+      <link>https://github.com/emptykid/Compositor/releases/tag/v1.4.9</link>
+      <changes><![CDATA[首次发布简体中文版，包含 1223 条中英文词条。
+功能与上游 1.4.9 同步，仅维护语言汉化。
+保留项目格式及快捷键设置兼容性，使用中文版独立更新渠道。
+本次发行包已使用 Developer ID 签名，尚未经过 Apple 公证。]]></changes>
+      <enclosure url="https://github.com/emptykid/Compositor/releases/download/v1.4.9/Compositor.dmg" sparkle:edSignature="cHmt6m9NaYPbi0NXhrQVjgiG6bYhTAs2ZBW8RVR0BPC/SSoqAMdnBpwpCrIb8Z6+7s8kA6g52tEQye5c55wtDA==" length="7481279" type="application/octet-stream"/>
+    </item>
   </channel>
 </rss>
