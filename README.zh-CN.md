@@ -6,6 +6,8 @@
 
 本项目的原则是：**功能与上游对应版本保持一致，只做语言汉化**。不另行增加或修改图像编辑功能；除本地化所需的适配外，仅调整中文版的文档、签名、打包和更新渠道。
 
+![Compositor 简体中文界面：多图层落日海报编辑示例](docs/images/compositor-zh-CN.jpg)
+
 ## 与原项目的关系
 
 - 原始项目：[robbietilton/Compositor](https://github.com/robbietilton/Compositor)。应用的设计与核心功能归功于原作者及上游贡献者。

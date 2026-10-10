@@ -6,6 +6,8 @@ This repository is an independently maintained **Simplified Chinese localization
 
 The current Chinese edition is **1.4.9 (build 44)**, based on upstream [v1.4.9](https://github.com/robbietilton/Compositor/releases/tag/v1.4.9), commit `0ab3ff5`. Future versions will follow upstream as they are merged and their translations are verified; synchronization is maintained manually.
 
+![Compositor in Simplified Chinese, editing a layered sunset poster](docs/images/compositor-zh-CN.jpg)
+
 The following describes the original project's purpose and features:
 
 Adobe Photoshop costs too much and tools like GIMP don’t feel familiar enough for me to stay in flow. That’s why I built Compositor.
