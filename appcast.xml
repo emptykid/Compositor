@@ -3,17 +3,17 @@
   <channel>
     <title>Compositor 简体中文版</title>
     <item>
-      <title>Version 1.4.9</title>
-      <pubDate>Sat, 10 Oct 2026 08:43:16 +0000</pubDate>
-      <sparkle:version>44</sparkle:version>
-      <sparkle:shortVersionString>1.4.9</sparkle:shortVersionString>
+      <title>Version 1.5.11</title>
+      <pubDate>Tue, 27 Oct 2026 07:33:07 +0000</pubDate>
+      <sparkle:version>57</sparkle:version>
+      <sparkle:shortVersionString>1.5.11</sparkle:shortVersionString>
       <sparkle:minimumSystemVersion>26.0</sparkle:minimumSystemVersion>
-      <link>https://github.com/emptykid/Compositor/releases/tag/v1.4.9</link>
-      <changes><![CDATA[首次发布简体中文版，包含 1223 条中英文词条。
-功能与上游 1.4.9 同步，仅维护语言汉化。
-保留项目格式及快捷键设置兼容性，使用中文版独立更新渠道。
+      <link>https://github.com/emptykid/Compositor/releases/tag/v1.5.11</link>
+      <changes><![CDATA[同步上游 1.5.11：GIF 动画图层、16 位与 HDR 图层、CMYK 校样与导出、镜头效果等新滤镜。
+新增 210 条中文词条，共 1433 条，覆盖新增菜单、滤镜、面板和提示。
+保留项目格式及快捷键设置兼容性。
 应用及 DMG 均已通过 Apple 公证，并已附加公证票据。]]></changes>
-      <enclosure url="https://github.com/emptykid/Compositor/releases/download/v1.4.9/Compositor.dmg" sparkle:edSignature="u/hVrQPVd3Q8xTtvF2CFuGd8EvdCqQHgSW0tS8XEgYYHr/XKOZgJBx18tIVcJc1V+EVsiDMLKM+CCnFZQkr6BA==" length="7483227" type="application/octet-stream"/>
+      <enclosure url="https://github.com/emptykid/Compositor/releases/download/v1.5.11/Compositor.dmg" sparkle:edSignature="/3bkenlKpCdUNO8W3KyD5IHB0PQ/5ara+dFbfv9SGOanttQ9bN6Xnsu6ehhv8d4QZ+9M2J9iL44KoRRPbKoEDA==" length="8031634" type="application/octet-stream"/>
     </item>
   </channel>
 </rss>
