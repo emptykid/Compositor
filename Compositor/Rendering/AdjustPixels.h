@@ -59,6 +59,11 @@ void camera_raw_statistics(const uint8_t *rgba, size_t width, size_t height, siz
 // it with a shadow-clip view (clipped channels dark on white). Alpha is kept.
 void adjust_camera_raw(uint8_t *rgba, size_t width, size_t height, size_t stride, const float *table, int grid,
                        int clipping);
+// The Metal lookup's supported table domain. The original CPU path handles other tables.
+int camera_raw_lookup_is_valid(const float *table, int grid);
+// Resolve GPU pixels near a rounding boundary with the original double-precision composed lookup.
+void camera_raw_repair_lookup(uint8_t *result, const uint8_t *source, const uint8_t *uncertain,
+                               size_t width, size_t height, size_t stride, const float *table, int grid);
 // Camera Raw Effects after Light and Color. Texture is a fine local contrast, Clarity a broader one.
 // Dehaze raises contrast and saturation when positive and lifts the shadows when negative. Glow, its
 // range, spread and warmth do nothing until `glow` is above zero: styles are 0 diffusion, 1 bloom,
@@ -66,6 +71,10 @@ void adjust_camera_raw(uint8_t *rgba, size_t width, size_t height, size_t stride
 // protects bright pixels only while the amount darkens. `scale` is preview pixels per layer pixel, so
 // the radii match a full-size render. Grain is applied separately. Alpha is kept.
 // Blue over clipped shadows and red over clipped highlights, on top of the grade. Preview only.
+// Camera Raw's Shadows, adapting to the picture region by region as Photoshop's does. `coefficients` are three planes
+// (lift, gain above, gain below) of `kCount` rows by `xCount` columns; see AdjustPixels.c.
+void adjust_camera_raw_shadows(uint8_t *rgba, size_t width, size_t height, size_t stride, const float *coefficients,
+                               int xCount, float xLow, float xStep, int kCount, float kLow, float kStep);
 void adjust_camera_raw_clip_overlay(uint8_t *rgba, size_t width, size_t height, size_t stride, int shadows, int highlights);
 // Curve, Color Mixer, and Color Grading after the basic grade. `toneLut` and the channel LUTs are 256
 // entries. `mixer` is 24 floats: hue, saturation, luminance for eight families, −1…1. Each point color is

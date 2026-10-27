@@ -12,7 +12,7 @@
 
 - 原始项目：[robbietilton/Compositor](https://github.com/robbietilton/Compositor)。应用的设计与核心功能归功于原作者及上游贡献者。
 - 中文项目：[emptykid/Compositor](https://github.com/emptykid/Compositor)。维护简体中文翻译及中文版发行包。
-- 当前版本：**1.4.9，构建号 44**，对应上游 [v1.4.9](https://github.com/robbietilton/Compositor/releases/tag/v1.4.9)，基于提交 `0ab3ff5`。
+- 当前版本：**1.5.11，构建号 57**，对应上游 [v1.5.11](https://github.com/robbietilton/Compositor/releases/tag/v1.5.11)，基于提交 `9959c32`。
 - 版本策略：应用版本号与所同步的上游正式版一致；上游发布后，人工合并、更新翻译并完成验证，再发布对应中文版，不承诺实时同步。
 - 兼容性：保留原有 `.comp` 项目格式、混合模式等存储值及快捷键标识。已有图层名称、文件名和用户输入的文字不会因切换语言而被翻译。
 
@@ -22,7 +22,7 @@
 
 需要 **Apple 芯片 Mac、macOS 26.0 或更高版本**。安装包的签名和 Apple 公证状态以对应 Release 的说明为准。
 
-当前 1.4.9 中文应用与 DMG 均已完成 **Developer ID 签名和 Apple 公证**，并已附加公证票据。安装包在首次发布后补充了公证，应用版本仍为 **1.4.9（构建号 44）**；此前已下载未公证安装包的用户可重新下载。
+当前 1.5.11 中文应用与 DMG 均已完成 **Developer ID 签名和 Apple 公证**，并已附加公证票据。
 
 原项目官网、原项目 Releases 和 `brew install --cask robbietilton-compositor` 提供的是上游版本，并非本仓库维护的中文版。
 
@@ -40,7 +40,7 @@
 
 ## 汉化范围
 
-当前版本包含 **1223 条中英文词条**，覆盖主菜单、工具名称与提示、图层与混合模式、调整与滤镜面板、Camera Raw、新建画布、导入导出、快捷键设置、命令搜索及主要弹窗。
+当前版本包含 **1433 条中英文词条**，覆盖主菜单、工具名称与提示、图层与混合模式、调整与滤镜面板、Camera Raw、新建画布、导入导出、快捷键设置、命令搜索及主要弹窗。
 
 中文命令搜索可用 `⌘F` 打开。翻译仅作用于界面显示；菜单操作、项目存储值和已保存的快捷键设置使用原有稳定标识。
 

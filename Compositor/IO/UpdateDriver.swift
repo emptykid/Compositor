@@ -25,8 +25,8 @@ import Sparkle
         alert.informativeText = downloaded
             ? String(localized: "\(name) \(appcastItem.displayVersionString) is ready to install — you have \(current).")
             : String(localized: "\(name) \(appcastItem.displayVersionString) is now available — you have \(current). Would you like to download it now?")
-        let changes = Self.changes(in: appcastItem)
-        if !changes.isEmpty { alert.accessoryView = Self.list(changes) }
+        // Always set, even with nothing listed, so the alert is the same width every time.
+        alert.accessoryView = Self.list(Self.changes(in: appcastItem))
         alert.addButton(withTitle: L10n.string(downloaded ? "Install and Relaunch" : "Install Update"))
         alert.addButton(withTitle: String(localized: "Remind Me Later"))
         alert.addButton(withTitle: String(localized: "Skip This Version"))
@@ -36,6 +36,7 @@ import Sparkle
             alert.suppressionButton?.state = updater.automaticallyDownloadsUpdates ? .on : .off
         }
         alert.layout()
+        Self.trimAccessory(alert)
         Self.alignIconWithTitle(alert)
         NSApp.activate()
         // After Sparkle's call returns, so its updater isn't held up inside a modal run loop.
@@ -77,6 +78,32 @@ import Sparkle
         }
     }
 
+    /// The list goes in taller than it is (see `list`), for NSAlert's wide layout. The space under it comes out now: the
+    /// list and the views NSAlert holds it in shrink to fit it, everything above moves down by the difference, and the
+    /// window loses that off its top.
+    private static func trimAccessory(_ alert: NSAlert) {
+        let window = alert.window
+        guard let content = window.contentView, !content.isFlipped, let holder = alert.accessoryView,
+              let label = holder.subviews.first else { return }
+        let trim = holder.frame.height - label.frame.height
+        guard trim > 0 else { return }
+        var chain = [holder]
+        while let up = chain.last?.superview, up !== content { chain.append(up) }
+        guard chain.last?.superview === content, let outer = chain.last else { return }
+        let top = outer.frame.maxY
+        let frames = content.subviews.map { view in
+            view === outer ? NSRect(origin: view.frame.origin, size: NSSize(width: view.frame.width, height: view.frame.height - trim))
+                : view.frame.minY >= top - 1 ? view.frame.offsetBy(dx: 0, dy: -trim) : view.frame
+        }
+        var frame = window.frame
+        frame.size.height -= trim
+        frame.origin.y += trim
+        window.setFrame(frame, display: false)
+        for (view, new) in zip(content.subviews, frames) { view.frame = new }
+        for view in chain.dropLast() { view.frame.size.height -= trim }
+        label.frame.origin.y = 0
+    }
+
     /// The item's changes as a list: a line each, any leading bullet or dash taken off.
     private static func changes(in item: SUAppcastItem) -> [String] {
         guard let text = item.propertiesDictionary["changes"] as? String else { return [] }
@@ -91,7 +118,7 @@ import Sparkle
         style.headIndent = 12
         style.paragraphSpacing = 4
         style.tabStops = [NSTextTab(textAlignment: .left, location: 12)]
-        let text = NSMutableAttributedString(string: String(localized: "What’s new\n"), attributes: [
+        let text = NSMutableAttributedString(string: changes.isEmpty ? "" : String(localized: "What’s new\n"), attributes: [
             .font: NSFont.systemFont(ofSize: NSFont.smallSystemFontSize, weight: .semibold),
             .foregroundColor: NSColor.labelColor, .paragraphStyle: style,
         ])
@@ -99,14 +126,16 @@ import Sparkle
             .font: NSFont.systemFont(ofSize: NSFont.smallSystemFontSize),
             .foregroundColor: NSColor.secondaryLabelColor, .paragraphStyle: style,
         ]))
-        // NSAlert keeps its wide layout (icon beside the text, buttons in a row) only while the accessory view is narrow,
-        // about 265 points; any wider and it stacks everything. So the view stays 260 wide, and the text runs on past it,
-        // unclipped, across the alert's whole text column, 489 points.
+        // NSAlert stacks everything (icon above the text, buttons in a column) unless that would make it too tall, and it
+        // stacks everything too if the accessory view is wider than about 265 points. So the view goes in 260 wide and 300
+        // tall, tall enough for the wide layout whatever the list, and `trimAccessory` takes the extra height back out.
+        // The text runs on past the view's edge, unclipped, across the alert's whole text column, 489 points.
         let label = NSTextField(labelWithAttributedString: text)
         label.maximumNumberOfLines = 0
         label.preferredMaxLayoutWidth = 480
-        label.frame = NSRect(origin: .zero, size: label.fittingSize)
-        let holder = NSView(frame: NSRect(x: 0, y: 0, width: 260, height: label.frame.height))
+        let size = changes.isEmpty ? .zero : label.fittingSize
+        let holder = NSView(frame: NSRect(x: 0, y: 0, width: 260, height: max(size.height, 300)))
+        label.frame = NSRect(x: 0, y: holder.frame.height - size.height, width: size.width, height: size.height)
         holder.clipsToBounds = false
         holder.addSubview(label)
         return holder

@@ -52,7 +52,9 @@ import QuartzCore
         guard let device = MTLCreateSystemDefaultDevice(), let queue = device.makeCommandQueue() else { return nil }
         self.device = device
         self.queue = queue
-        context = CIContext(mtlCommandQueue: queue, options: [.workingColorSpace: space, .cacheIntermediates: false])
+        // Extended sRGB: the same blending as sRGB, with an HDR layer's light brighter than white carried through rather
+        // than clipped, so an adjustment over it (Exposure turned down) brings its highlights into view.
+        context = CIContext(mtlCommandQueue: queue, options: [.workingColorSpace: DeepLayer.hdrSpace, .cacheIntermediates: false])
         // Once the canvas stops redrawing, what its last frame didn't use goes; frames alone would never count past it.
         idle = Timer.scheduledTimer(withTimeInterval: 3, repeats: true) { [weak self] _ in
             MainActor.assumeIsolated {
@@ -85,6 +87,24 @@ import QuartzCore
     /// `image` as a texture, `level` halvings smaller (sharp reductions for zooming out, as `DownsampleCache` makes on
     /// the CPU). A mask comes back with its values in the red channel. A `transient` image — one that's replaced every
     /// frame, like a Smudge stroke's — is kept only for the frame it's drawn in, and reduced as it's drawn.
+    /// `image` worked out now and kept in a texture, in the working space at its precision, so drawing it later costs a
+    /// read rather than everything it was made from. Nil when it's unbounded or too big to keep.
+    func keep(_ image: CIImage) -> CIImage? {
+        let extent = image.extent
+        guard !extent.isInfinite, !extent.isEmpty else { return nil }
+        let bounds = extent.integral
+        guard bounds.width <= 16384, bounds.height <= 16384, bounds.width * bounds.height <= 16_000_000 else { return nil }
+        let descriptor = MTLTextureDescriptor.texture2DDescriptor(pixelFormat: .rgba16Float, width: Int(bounds.width),
+                                                                  height: Int(bounds.height), mipmapped: false)
+        descriptor.usage = [.shaderRead, .shaderWrite, .renderTarget]
+        descriptor.storageMode = .private
+        guard let texture = device.makeTexture(descriptor: descriptor), let command = queue.makeCommandBuffer() else { return nil }
+        context.render(image, to: texture, commandBuffer: command, bounds: bounds, colorSpace: DeepLayer.hdrSpace)
+        command.commit()
+        guard let read = CIImage(mtlTexture: texture, options: [.colorSpace: DeepLayer.hdrSpace]) else { return nil }
+        return read.transformed(by: CGAffineTransform(translationX: bounds.minX, y: bounds.minY)).cropped(to: extent)
+    }
+
     func image(_ image: CGImage, level: Int = 0, mask: Bool = false, transient: Bool = false) -> CIImage? {
         texture(image, level: level, mask: mask, transient: transient, drawing: true)
     }
@@ -107,7 +127,8 @@ import QuartzCore
                 made = upload(image, mask: mask)
             } else if let larger = texture(image, level: level - 1, mask: mask, transient: false, drawing: false) {
                 made = reduce(larger, from: Self.size(image.width, image.height, level: level - 1),
-                              to: Self.size(image.width, image.height, level: level), mask: mask)
+                              to: Self.size(image.width, image.height, level: level), mask: mask,
+                              format: Self.format(of: image, mask: mask))
             } else { made = nil }
             guard let made else { return nil }
             textures[key] = Entry(source: image, image: made, used: frame, keep: keep)
@@ -240,9 +261,15 @@ import QuartzCore
         strokes = strokes.filter { $0.value.used >= frame - keepFrames }
     }
 
-    private func texture(width: Int, height: Int, mask: Bool) -> MTLTexture? {
+    /// The texture an image goes up as: a mask's gray; a 16-bit layer's pixels at 16 bits; an HDR layer's as half floats,
+    /// light brighter than white kept; anything else at 8 bits.
+    static func format(of image: CGImage, mask: Bool) -> MTLPixelFormat {
+        mask ? .r8Unorm : DeepLayer.isHDR(image) ? .rgba16Float : image.bitsPerComponent == 16 ? .rgba16Unorm : .rgba8Unorm
+    }
+
+    private func texture(width: Int, height: Int, mask: Bool, format: MTLPixelFormat? = nil) -> MTLTexture? {
         guard width > 0, height > 0, width <= 16_384, height <= 16_384 else { return nil }
-        let descriptor = MTLTextureDescriptor.texture2DDescriptor(pixelFormat: mask ? .r8Unorm : .rgba8Unorm,
+        let descriptor = MTLTextureDescriptor.texture2DDescriptor(pixelFormat: format ?? (mask ? .r8Unorm : .rgba8Unorm),
                                                                   width: width, height: height, mipmapped: false)
         descriptor.usage = [.shaderRead, .shaderWrite]
         descriptor.storageMode = .shared
@@ -250,13 +277,18 @@ import QuartzCore
     }
 
     private func wrap(_ texture: MTLTexture, mask: Bool) -> CIImage? {
-        CIImage(mtlTexture: texture, options: [.colorSpace: mask ? NSNull() : space])
+        CIImage(mtlTexture: texture, options: [.colorSpace: mask ? NSNull() : texture.pixelFormat == .rgba16Float ? DeepLayer.hdrSpace : space])
     }
 
     /// The image's own bytes, copied straight in: sRGB, premultiplied, top row first — or for a mask, its gray values.
     private func upload(_ image: CGImage, mask: Bool) -> CIImage? {
-        guard let texture = texture(width: image.width, height: image.height, mask: mask),
-              let pixels = try? (mask ? Self.grayCopy(image) : BrushRaster.copy(image)), let data = pixels.data else { return nil }
+        // A 16-bit layer's pixels go up at 16 bits, an HDR layer's as half floats (light brighter than white kept), each
+        // in the layout its texture reads.
+        let format = Self.format(of: image, mask: mask)
+        guard let texture = texture(width: image.width, height: image.height, mask: mask, format: format),
+              let pixels = try? (mask ? Self.grayCopy(image) : format == .rgba16Float ? DeepLayer.hdr(image)
+                                 : format == .rgba16Unorm ? DeepLayer.canonical(image) : BrushRaster.copy(image)),
+              let data = pixels.data else { return nil }
         texture.replace(region: MTLRegionMake2D(0, 0, image.width, image.height), mipmapLevel: 0,
                         withBytes: data, bytesPerRow: pixels.bytesPerRow)
         return wrap(texture, mask: mask)
@@ -297,26 +329,48 @@ import QuartzCore
     }
 
     /// `larger` (`from` in size) sharply reduced to `to`, kept as a texture of its own.
-    private func reduce(_ larger: CIImage, from: CGSize, to: CGSize, mask: Bool) -> CIImage? {
+    private func reduce(_ larger: CIImage, from: CGSize, to: CGSize, mask: Bool, format: MTLPixelFormat? = nil) -> CIImage? {
         let w = Int(to.width), h = Int(to.height)
         let sx = to.width / from.width, sy = to.height / from.height
         let reduced = larger.clampedToExtent()
             .applyingFilter("CILanczosScaleTransform", parameters: [kCIInputScaleKey: sy, kCIInputAspectRatioKey: sx / sy])
             .cropped(to: CGRect(x: 0, y: 0, width: w, height: h))
-        guard let texture = texture(width: w, height: h, mask: mask), let buffer = queue.makeCommandBuffer() else { return nil }
+        guard let texture = texture(width: w, height: h, mask: mask, format: format), let buffer = queue.makeCommandBuffer() else { return nil }
         // A mask's values carry no color space; rendered in the working space, they're written as they are.
         context.render(reduced, to: texture, commandBuffer: buffer, bounds: CGRect(x: 0, y: 0, width: w, height: h),
-                       colorSpace: space)
+                       colorSpace: format == .rgba16Float ? DeepLayer.hdrSpace : space)
         buffer.commit()
         buffer.waitUntilCompleted()
         return wrap(texture, mask: mask)
     }
 
+    /// `image` with up to just under half an 8-bit level of noise added to each color channel, fixed in place (so it
+    /// doesn't crawl from frame to frame), and alpha untouched.
+    static func dithered(_ image: CIImage) -> CIImage {
+        let step = 0.999 / 255
+        // Up to a level of noise, opaque (Core Image keeps colors premultiplied, so clear noise would add nothing), added
+        // to the colors by Linear Dodge, which leaves the frame's coverage as it is; then the whole shifted down by half a
+        // level, as the noise can't go below zero.
+        // The generator's alpha is random too: set to 1 first, or scaling its colors would divide by it.
+        let noise = CIFilter(name: "CIRandomGenerator")!.outputImage!.cropped(to: image.extent).settingAlphaOne(in: image.extent)
+            .applyingFilter("CIColorMatrix", parameters: [
+                "inputRVector": CIVector(x: step, y: 0, z: 0, w: 0), "inputGVector": CIVector(x: 0, y: step, z: 0, w: 0),
+                "inputBVector": CIVector(x: 0, y: 0, z: step, w: 0),
+            ])
+        return noise.applyingFilter("CILinearDodgeBlendMode", parameters: [kCIInputBackgroundImageKey: image])
+            .applyingFilter("CIColorMatrix", parameters: ["inputBiasVector": CIVector(x: -step / 2, y: -step / 2, z: -step / 2, w: 0)])
+            .cropped(to: image.extent)
+    }
+
     /// Draws `image` into `layer`'s next drawable, in step with the Core Animation transaction it's drawn in, so it
     /// lands on the same frame as the overlays above it.
-    func present(_ image: CIImage, in layer: CAMetalLayer) {
+    /// `dither`: the frame has tones between the drawable's 8-bit levels (a 16-bit or HDR layer's), rounded with a fine
+    /// noise rather than straight, so a gentle gradient doesn't band on screen. The noise is under half a level, so
+    /// tones already on a level (everything 8-bit) round to themselves exactly as before.
+    func present(_ image: CIImage, in layer: CAMetalLayer, dither: Bool = false) {
         guard let drawable = layer.nextDrawable(), let buffer = queue.makeCommandBuffer() else { return }
         let size = layer.drawableSize
+        let image = dither ? Self.dithered(image) : image
         // Core Image writes a texture that can be rendered to bottom row first (a plain one, top row first), so the
         // frame is turned over to land top row first.
         let upright = drawable.texture.usage.contains(.renderTarget)
@@ -503,7 +557,30 @@ nonisolated enum GPUBlend {
 nonisolated enum GPUAdjustment {
     /// `image` adjusted, laid out in frame pixels: `scale` frame pixels per document pixel, and `mapping` from document
     /// pixels to the frame (for Grain, whose pattern belongs to the document).
-    static func apply(_ adjustment: LayerAdjustment, to image: CIImage, scale: CGFloat, mapping: CGAffineTransform) -> CIImage? {
+    /// `hdr`: the document has an HDR layer, so what's below may be brighter than white. Exposure then works on its full
+    /// range, and the tonal adjustments see each highlight divided down to within white and multiply their result back,
+    /// as `LayerAdjustment.applySixteenBit` does for a merge or export.
+    /// `document`: the document's size, which Vignette frames and Lens Effects measures itself by; without it, `image`'s.
+    static func apply(_ adjustment: LayerAdjustment, to image: CIImage, scale: CGFloat, mapping: CGAffineTransform,
+                      hdr: Bool = false, document: CGSize? = nil) -> CIImage? {
+        if hdr, adjustment.kind == .exposure { return exposure(adjustment.exposure, to: image) }
+        if hdr, [.levels, .hsv, .curves, .blackWhite, .colorBalance, .gradientMap, .invert, .vignette, .tonalContrast]
+            .contains(adjustment.kind) {
+            // Worked on in straight colors at full coverage, so the blend filters' compositing leaves them alone; the
+            // coverage goes back at the end.
+            let extent = image.extent
+            let straight = image.unpremultiplyingAlpha().settingAlphaOne(in: extent)
+            // Each pixel's brightest channel, at least 1: dividing by it fits a highlight within white with its hue.
+            let brightest = straight.applyingFilter("CIMaximumComponent").applyingFilter("CIColorClamp", parameters: [
+                "inputMinComponents": CIVector(x: 1, y: 1, z: 1, w: 1), "inputMaxComponents": CIVector(x: 65504, y: 65504, z: 65504, w: 1)])
+            let within = straight.applyingFilter("CIDivideBlendMode", parameters: [kCIInputBackgroundImageKey: straight,
+                                                                                   kCIInputImageKey: brightest])
+            guard let changed = apply(adjustment, to: within, scale: scale, mapping: mapping, document: document) else { return nil }
+            return changed.applyingFilter("CIMultiplyCompositing", parameters: [kCIInputBackgroundImageKey: brightest])
+                .applyingFilter("CIBlendWithAlphaMask", parameters: [kCIInputBackgroundImageKey: CIImage.empty(),
+                                                                     kCIInputMaskImageKey: image])
+                .cropped(to: extent)
+        }
         switch adjustment.kind {
         case .levels:
             guard !adjustment.levels.isIdentity else { return image }
@@ -540,7 +617,95 @@ nonisolated enum GPUAdjustment {
                                      monochromatic: adjustment.resolvedNoiseMonochromatic, seed: adjustment.resolvedNoiseSeed)
         case .grain:
             return GPUNoise.addGrain(to: image, grain: adjustment.grain, scale: scale, mapping: mapping)
+        case .bloomGlow:
+            let settings = adjustment.filterLayer
+            return image.applyingFilter("CIBloom", parameters: [
+                kCIInputRadiusKey: settings.bloomRadius * scale, kCIInputIntensityKey: settings.bloomAmount / 50,
+            ]).cropped(to: image.extent)
+        case .progressiveBlur:
+            return progressivelyBlurred(image, adjustment.filterLayer, scale: scale, mapping: mapping)
+        case .vignette:
+            let canvas = document.map { CGRect(origin: .zero, size: $0).applying(mapping) } ?? image.extent
+            return MetalFinishing.vignette(image, canvas: canvas, adjustment.filterLayer.resolvedVignette)
+        case .sharpen:
+            let sharpen = adjustment.filterLayer.resolvedSharpen
+            guard sharpen.amount > 0 else { return image }
+            return image.clampedToExtent().applyingFilter("CIUnsharpMask", parameters: [
+                kCIInputRadiusKey: sharpen.radius * scale, kCIInputIntensityKey: sharpen.amount / 100,
+            ]).cropped(to: image.extent)
+        case .tonalContrast:
+            let tonal = adjustment.filterLayer.resolvedTonal
+            return MetalFinishing.tonalContrast(image, radius: tonal.radius * scale, tonal)
+        case .lensEffects:
+            let side = document.map { max($0.width, $0.height) * scale } ?? max(image.extent.width, image.extent.height)
+            // The frame's y points down, the filter's up: angles counterclockwise there turn the other way here.
+            var lens = adjustment.filterLayer.lens ?? LensEffectSettings()
+            lens.starAngle = -lens.starAngle
+            lens.prismAngle = -lens.prismAngle
+            // Only what's in the document, as the export sees it: a layer reaching past the canvas would otherwise add
+            // lights the export never has.
+            let page = document.map { CGRect(origin: .zero, size: $0).applying(mapping) }
+            // Sampled smoothly, as the export's pixels are: the canvas copies a layer pixel for pixel with nearest
+            // sampling, and the spikes' rotations would carry that on, keeping hard bright pixels the export smooths.
+            let smooth = image.samplingLinear()
+            return try? lens.apply(to: page.map { smooth.cropped(to: $0) } ?? smooth, side: side)
+        case .rgbSplit:
+            let settings = adjustment.filterLayer
+            let distance = settings.rgbSplitDistance * scale, blur = settings.rgbSplitBlur * scale
+            guard distance > 0 || blur > 0 else { return image }
+            let center = settings.rgbSplitCenter.map { $0.applying(mapping) } ?? CGPoint(x: image.extent.midX, y: image.extent.midY)
+            let angle = settings.rgbSplitAngle * .pi / 180
+            let spread = settings.rgbSplitRadial ? distance * 2 : distance, smear = settings.rgbSplitRadial ? blur * 2 : blur
+            // The frame's y points down, as the document's does, so the direction carries over as it is.
+            return MetalDispersion.apply(to: image, MetalDispersion.Parameters(
+                center: SIMD2(Float(center.x), Float(center.y)), direction: SIMD2(Float(cos(angle)), Float(-sin(angle))),
+                distance: Float(distance), blur: Float(blur), reach: Float(settings.rgbSplitReach * scale),
+                radial: settings.rgbSplitRadial ? 1 : 0, sides: 0,
+                spectral: distance > 0 ? UInt32(min(32, max(3, Int(spread)))) : 1,
+                smear: blur > 0 ? UInt32(min(24, max(2, Int(smear / 2)))) : 1),
+                margin: CGFloat((distance + blur) * (settings.rgbSplitRadial ? 2 : 1) + 2))
         }
+    }
+
+    /// Progressive Blur, as `PixelFilter.progressivelyBlurred` makes it, in frame pixels: its line placed through
+    /// `mapping`, the frame's y pointing down as the document's does.
+    private static func progressivelyBlurred(_ image: CIImage, _ settings: FilterLayerSettings, scale: CGFloat,
+                                             mapping: CGAffineTransform) -> CIImage {
+        let extent = image.extent
+        let start = settings.progressiveStart.map { $0.applying(mapping) } ?? CGPoint(x: extent.midX, y: extent.minY)
+        var end = settings.progressiveEnd.map { $0.applying(mapping) } ?? CGPoint(x: extent.midX, y: extent.maxY)
+        if hypot(end.x - start.x, end.y - start.y) < 1 { end = CGPoint(x: start.x, y: start.y + 1) }
+        var from = settings.progressiveFrom, to = settings.progressiveTo
+        if settings.progressiveInverted { swap(&from, &to) }
+        let strongest = max(from, to)
+        guard strongest > 0 else { return image }
+        func share(_ radius: Double) -> CIColor { CIColor(red: radius / strongest, green: radius / strongest, blue: radius / strongest) }
+        let mask = settings.progressiveRadial
+            ? CIFilter(name: "CIRadialGradient", parameters: [
+                kCIInputCenterKey: CIVector(cgPoint: start), "inputRadius0": 0,
+                "inputRadius1": hypot(end.x - start.x, end.y - start.y), "inputColor0": share(from), "inputColor1": share(to)])!.outputImage!
+            : CIFilter(name: "CILinearGradient", parameters: [
+                "inputPoint0": CIVector(cgPoint: start), "inputPoint1": CIVector(cgPoint: end),
+                "inputColor0": share(from), "inputColor1": share(to)])!.outputImage!
+        return image.applyingFilter("CIMaskedVariableBlur", parameters: ["inputMask": mask, kCIInputRadiusKey: strongest * scale])
+    }
+
+    /// Exposure over the full range, past white: as `ExposureSettings.table` (to linear light, scaled, offset, raised to
+    /// 1/gamma, and back), read from a curve reaching 16 times white, finely enough to be smooth.
+    private static func exposure(_ settings: ExposureSettings, to image: CIImage) -> CIImage {
+        let settings = settings.normalized
+        let size = 8192, top = 16.0, scale = pow(2, settings.exposure)
+        func linear(_ encoded: Double) -> Double { encoded <= 0.04045 ? encoded / 12.92 : pow((encoded + 0.055) / 1.055, 2.4) }
+        func encoded(_ linear: Double) -> Double { linear <= 0.0031308 ? linear * 12.92 : 1.055 * pow(linear, 1 / 2.4) - 0.055 }
+        let curve = (0..<size).flatMap { index -> [Float] in
+            let value = Float(encoded(pow(max(0, linear(Double(index) / Double(size - 1) * top) * scale + settings.offset), 1 / settings.gamma)))
+            return [value, value, value]
+        }
+        return image.applyingFilter("CIColorCurves", parameters: [
+            "inputCurvesData": curve.withUnsafeBufferPointer { Data(buffer: $0) },
+            "inputCurvesDomain": CIVector(x: 0, y: top),
+            "inputColorSpace": DeepLayer.hdrSpace,
+        ])
     }
 
     // MARK: Color lookups

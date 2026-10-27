@@ -87,6 +87,38 @@ final class TransformOverlay: NSView {
                 session.viewport.viewPoint(from: edit.end, documentSize: document.size))
     }
 
+    /// Progressive Blur's line in view coordinates while its panel is open, and whether it's radial.
+    var progressiveLine: (start: CGPoint, end: CGPoint, radial: Bool)? {
+        guard let edit = session.filterEdit, edit.kind == .progressiveBlur, let start = edit.settings.progressiveStart,
+              let end = edit.settings.progressiveEnd, let document = session.document else { return nil }
+        return (session.viewport.viewPoint(from: start, documentSize: document.size),
+                session.viewport.viewPoint(from: end, documentSize: document.size), edit.settings.progressiveRadial)
+    }
+
+    /// RGB Split's center in view coordinates while its panel is open on Radial.
+    var rgbSplitCenter: CGPoint? {
+        guard let edit = session.filterEdit, edit.kind == .rgbSplit, edit.settings.rgbSplitRadial,
+              let center = edit.settings.rgbSplitCenter, let document = session.document else { return nil }
+        return session.viewport.viewPoint(from: center, documentSize: document.size)
+    }
+
+    /// A crosshair in a ring, where the split spreads out from.
+    private func drawRGBSplitCenter(_ center: CGPoint) {
+        guard let context = NSGraphicsContext.current?.cgContext else { return }
+        context.saveGState()
+        for (width, color) in [(3.0, NSColor.black.withAlphaComponent(0.7)), (1.0, NSColor.white)] {
+            context.setStrokeColor(color.cgColor)
+            context.setLineWidth(width)
+            context.strokeEllipse(in: CGRect(x: center.x - 7, y: center.y - 7, width: 14, height: 14))
+            context.move(to: CGPoint(x: center.x - 12, y: center.y)); context.addLine(to: CGPoint(x: center.x - 4, y: center.y))
+            context.move(to: CGPoint(x: center.x + 4, y: center.y)); context.addLine(to: CGPoint(x: center.x + 12, y: center.y))
+            context.move(to: CGPoint(x: center.x, y: center.y - 12)); context.addLine(to: CGPoint(x: center.x, y: center.y - 4))
+            context.move(to: CGPoint(x: center.x, y: center.y + 4)); context.addLine(to: CGPoint(x: center.x, y: center.y + 12))
+            context.strokePath()
+        }
+        context.restoreGState()
+    }
+
     var antsPhase: CGFloat = 0
 
     // MARK: Marching ants level of detail
@@ -179,7 +211,9 @@ final class TransformOverlay: NSView {
     override func draw(_ dirtyRect: NSRect) {
         drawLayoutGrid()
         drawGuides()
-        if session.tool == .crop { drawCrop() }
+        if let line = progressiveLine { drawProgressiveLine(line) }
+        if let center = rgbSplitCenter { drawRGBSplitCenter(center) }
+        else if session.tool == .crop { drawCrop() }
         else if let line = gradientLine { drawGradientLine(line) }
         else { drawTransformHandles() }
         drawSelection()
@@ -394,6 +428,50 @@ final class TransformOverlay: NSView {
         }
         return regions
     }
+    /// Progressive Blur's line: a solid handle where it's sharp, a hollow one where it's fully blurred, and for a radial
+    /// one the circle it reaches full blur at.
+    private func drawProgressiveLine(_ line: (start: CGPoint, end: CGPoint, radial: Bool)) {
+        guard let context = NSGraphicsContext.current?.cgContext else { return }
+        context.saveGState()
+        if line.radial {
+            let radius = hypot(line.end.x - line.start.x, line.end.y - line.start.y)
+            let rim = CGRect(x: line.start.x - radius, y: line.start.y - radius, width: radius * 2, height: radius * 2)
+            context.setLineDash(phase: 0, lengths: [4, 4])
+            context.setStrokeColor(NSColor.black.withAlphaComponent(0.5).cgColor)
+            context.setLineWidth(2)
+            context.strokeEllipse(in: rim)
+            context.setStrokeColor(NSColor.white.withAlphaComponent(0.8).cgColor)
+            context.setLineWidth(1)
+            context.strokeEllipse(in: rim)
+            context.setLineDash(phase: 0, lengths: [])
+        }
+        for (width, color) in [(3.0, NSColor.black.withAlphaComponent(0.7)), (1.0, NSColor.white)] {
+            context.move(to: line.start)
+            context.addLine(to: line.end)
+            context.setStrokeColor(color.cgColor)
+            context.setLineWidth(width)
+            context.strokePath()
+        }
+        context.setStrokeColor(NSColor.black.cgColor)
+        context.setLineWidth(1)
+        // Sharp: a solid handle.
+        let sharp = CGRect(x: line.start.x - 6, y: line.start.y - 6, width: 12, height: 12)
+        context.setFillColor(NSColor.white.cgColor)
+        context.fillEllipse(in: sharp)
+        context.strokeEllipse(in: sharp)
+        // Blurred: a ring, soft gray inside.
+        let blurred = CGRect(x: line.end.x - 6, y: line.end.y - 6, width: 12, height: 12)
+        context.setFillColor(NSColor(white: 0.6, alpha: 0.9).cgColor)
+        context.fillEllipse(in: blurred)
+        context.setStrokeColor(NSColor.white.cgColor)
+        context.setLineWidth(2)
+        context.strokeEllipse(in: blurred.insetBy(dx: 1, dy: 1))
+        context.setStrokeColor(NSColor.black.cgColor)
+        context.setLineWidth(1)
+        context.strokeEllipse(in: blurred)
+        context.restoreGState()
+    }
+
     private func drawGradientLine(_ line: (start: CGPoint, end: CGPoint)) {
         guard let context = NSGraphicsContext.current?.cgContext else { return }
         context.saveGState()

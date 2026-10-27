@@ -4,7 +4,7 @@
 
 This repository is an independently maintained **Simplified Chinese localization fork** of [robbietilton/Compositor](https://github.com/robbietilton/Compositor), created by Robbie Tilton. It follows upstream features and version numbers; changes here are limited to localization and the packaging needed to distribute the Chinese edition. It is not an official upstream release.
 
-The current Chinese edition is **1.4.9 (build 44)**, based on upstream [v1.4.9](https://github.com/robbietilton/Compositor/releases/tag/v1.4.9), commit `0ab3ff5`. Future versions will follow upstream as they are merged and their translations are verified; synchronization is maintained manually.
+The current Chinese edition is **1.5.11 (build 57)**, based on upstream [v1.5.11](https://github.com/robbietilton/Compositor/releases/tag/v1.5.11), commit `9959c32`. Future versions will follow upstream as they are merged and their translations are verified; synchronization is maintained manually.
 
 ![Compositor in Simplified Chinese, editing a layered sunset poster](docs/images/compositor-zh-CN.jpg)
 
@@ -25,7 +25,7 @@ The app includes English and Simplified Chinese and follows macOS language prefe
 
 This fork uses its own signed update feed. Upstream downloads and Homebrew packages install the original edition, not this Chinese fork. See each release's notes for its signing and notarization status.
 
-The current Chinese 1.4.9 app and DMG are **Developer ID signed and Apple notarized**, with the notarization tickets stapled to both. The package was updated after the initial release to include notarization; its application version remains 1.4.9 (build 44).
+The current Chinese 1.5.11 app and DMG are **Developer ID signed and Apple notarized**, with the notarization tickets stapled to both.
 
 ### Original edition (upstream)
 
@@ -41,7 +41,7 @@ brew install --cask robbietilton-compositor
 - Layers and folders, with opacity and Photoshop's full set of blend modes in its order — a folder's opacity dims everything inside it
 - Layer masks: paint, fill, invert, blur and feather them anywhere on the canvas, past the layer's own pixels; link or unlink them to transform a mask on its own
 - Clipping masks and folder masks
-- Adjustment layers: Hue/Saturation, Levels, Curves, Exposure, Gradient Map, Grain, Black & White, Color Balance, Invert, Gaussian Blur, Motion Blur and Noise
+- Adjustment layers: Hue/Saturation, Levels, Curves, Exposure, Gradient Map, Grain, Black & White, Color Balance, Invert, and filter layers: Gaussian Blur, Motion Blur, Progressive Blur, Sharpen, Noise, Vignette, Bloom / Glow, RGB Split, Lens Effects and Tonal Contrast
 - Layer effects: Stroke, Drop Shadow, Color Overlay, Inner Shadow, Outer Glow and Inner Glow, rendered on the GPU and editable at any time
 - Merge Down, Merge Layers and Merge Group (⌘E)
 - Duplicate, rename inline, reorder and nest by drag and drop; Option-drag to duplicate; a right-click menu in the Layers panel
@@ -54,6 +54,7 @@ brew install --cask robbietilton-compositor
 - Snapping to canvas and layer edges and centers, with guides
 - Exact values for position, size, scale and angle, stepped with the arrow keys
 - Flip Layer and Flip Canvas, horizontal and vertical
+- Align and Distribute layers to each other, the selection or the canvas, from the Move tool's bar or the Layer menu
 
 ### Selections
 - Rectangle and Ellipse Marquee, Freehand and Polygonal Lasso, and the Magic tool — Wand selects by color, Object traces whatever you click (Tab switches)
@@ -64,6 +65,7 @@ brew install --cask robbietilton-compositor
 
 ### Painting and retouching
 - Brush with size, hardness, opacity and smoothing, in Paint or Erase mode (B and E), and Shift for straight lines
+- Pen pressure for the Brush's size and opacity, on a graphics tablet
 - Spot Healing Brush (content-aware)
 - Clone Stamp, aligned or not, sampling one layer or all of them
 - Blur tool, on pixels or masks
@@ -72,10 +74,10 @@ brew install --cask robbietilton-compositor
 - Eyedropper and a full color picker
 
 ### Adjustments and filters
-- Camera Raw filter: light, color, curves, color mixer, color grading, detail, optics and geometry, in a panel beside the canvas
+- Camera Raw filter: light, color, curves, color mixer, color grading, detail, optics and geometry, in a panel beside the canvas; each section resets to its defaults from its header
 - Levels (with Auto), Curves, Hue/Saturation, Exposure, Gradient Map, Grain, Black & White, Color Balance and Invert
 - Gaussian Blur and Motion Blur that spread past a layer's edges
-- Add Noise, Vignette, Bloom / Glow, Dither, Scanlines, Tonal Contrast, Lens Correction and Remove Background
+- Sharpen, Add Noise, Vignette, Bloom / Glow, Dither, Scanlines, RGB Split, Lens Effects (anamorphic flare, starburst, mist, prism and bokeh in round, hexagon, oval or cat's-eye shapes), Tonal Contrast, Lens Correction and Remove Background
 - Live previews, limited to the selection when there is one
 - Last Filter (⌃⌘F) runs the last filter again with the same settings
 
@@ -86,11 +88,12 @@ brew install --cask robbietilton-compositor
 - Rulers (⌘R), guides dragged from them, a layout grid with adjustable spacing and subdivisions, and Snap To for guides, grid, layers and document bounds
 - Crop with snapping, ratios including 3:4 and 9:16, and Option for symmetric cropping; with a selection, the crop starts at it
 - Canvas Size, Image Size and Trim
+- The tool bar moves into two columns when the window is too short for one
 - A Navigator minimap in the canvas's corner from 300% zoom: the whole document in small with a box around the view; click or drag to move there (View › Navigator)
 - Sharp high-quality downsampling when zoomed out, and a pixel grid when zoomed in
-- Import JPEG, PNG, HEIC, TIFF, WebP, SVG, camera RAW (with a develop step first) and Photoshop PSD and PSB (8-bit RGB; not CMYK). Photoshop folders, masks, blend modes, fill rectangles/ellipses, and simple horizontal text stay editable; other vectors and vertical text become pixels. A conversion report is shown before anything is applied.
+- Import JPEG, PNG, HEIC, TIFF, WebP, SVG, PDF (every page its own layer, at 300 DPI or fitted to the canvas), animated GIF (one layer whose frames show in a strip under the canvas, to play, paint on, duplicate, delete and retime), camera RAW (with a develop step first) and Photoshop PSD and PSB (8-bit RGB; not CMYK). Each Photoshop artboard opens in a tab of its own; folders, masks, blend modes, fill rectangles/ellipses, and simple horizontal text stay editable; other vectors and vertical text become pixels. A conversion report is shown before anything is applied.
 - Large documents: the memory budget scales with your Mac, and a Photoshop file too big to open has its layers cropped to the canvas instead
-- Export PNG (⇧⌘E), Export JPEG (⇧⌥⌘S), and Export As (⇧⌥⌘W) for PNG, JPEG or a one-page PDF at the print size, scaled if you like, with a live preview, JPEG quality and file size; Copy Merged
+- Export PNG (⇧⌘E), Export JPEG (⇧⌥⌘S), and Export As (⇧⌥⌘W) for PNG, JPEG, a one-page PDF at the print size or, with a GIF layer, an animated GIF, scaled if you like, with a live preview, JPEG quality and file size; Channel Pack in Export As packs layers into a PNG's red, green, blue and alpha for game textures, and RGB Split's Split to Layers turns a layer back into those four; Copy Merged
 - Keep working while a project saves
 - Photoshop-style keyboard shortcuts throughout, remappable in Edit > Keyboard Shortcuts
 - Drag a number's label to scrub its value, as in Photoshop
@@ -108,13 +111,23 @@ brew install --cask robbietilton-compositor
 
 This branch supports English and Simplified Chinese, following the macOS language preference for the app. Read the [中文说明](README.zh-CN.md) for the fork’s scope and installation instructions. See [Localization](docs/localization.md) for translation and validation instructions. Upstream currently does not accept localization pull requests; these translations are maintained in this branch.
 
+## Other platforms
+
+Compositor is macOS only. These unofficial ports are made by others, not reviewed or supported by me, so please report issues to them:
+
+- [CompositorWindows](https://github.com/Cengokill/CompositorWindows) by [@Cengokill](https://github.com/Cengokill): Windows
+- [Composa](https://github.com/dvdstelt/Composa) by [@dvdstelt](https://github.com/dvdstelt): Windows and Linux
+- [CompositorLX](https://github.com/ClaudiuJitea/compositorLX) by [@ClaudiuJitea](https://github.com/ClaudiuJitea): Linux
+
+More are listed in [#23 (Windows)](https://github.com/robbietilton/Compositor/issues/23) and [#19 (Linux)](https://github.com/robbietilton/Compositor/issues/19).
+
 ## Building
 
 Open `Compositor.xcodeproj` and run the **Compositor** scheme.
 
 ## Releasing
 
-Keep `MARKETING_VERSION` and `CURRENT_PROJECT_VERSION` aligned with the upstream release being localized. This fork publishes tags such as `v1.4.9` in its own repository; it does not modify upstream tags or releases.
+Keep `MARKETING_VERSION` and `CURRENT_PROJECT_VERSION` aligned with the upstream release being localized. This fork publishes tags such as `v1.5.11` in its own repository; it does not modify upstream tags or releases.
 
 `scripts/release.sh` builds a Release version, signs it with your Developer ID certificate, notarizes it, and packages it as `dist/Compositor-<version>.dmg`. It needs a Developer ID Application certificate and a `notarytool` credential profile in your local keychain. Credentials and private keys stay outside this repository. The maintainer’s local credential profile is `dm-notary`; use `NOTARY_PROFILE` to select another profile. `create-dmg` is optional; the script falls back to `hdiutil`.
 

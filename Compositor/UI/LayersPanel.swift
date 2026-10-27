@@ -4,30 +4,32 @@ struct LayersPanel: View {
     @Bindable var session: EditorSession
     /// Dragging the panel's left edge sets it, within `widths`.
     var width: CGFloat = 252
-    static let widths: ClosedRange<Double> = 202...352
+    /// No narrower than the footer: its icons can't shrink, and a footer wider than the panel pushed everything in
+    /// it out past both edges, over the edge that resizes it.
+    static let widths: ClosedRange<Double> = 222...352
 
     var body: some View {
         VStack(alignment: .leading, spacing: 0) {
-            HStack {
-                Text("Layers").font(.system(size: 12, weight: .semibold))
-                Spacer()
-                Text("\(session.document?.layers.count ?? 0)").font(.caption.monospacedDigit()).foregroundStyle(.tertiary)
-                    .accessibilityIdentifier("layerCount")
-            }.padding(18)
+            LayersHeader(session: session)
             Divider()
             LayerAppearanceControls(session: session, layerID: session.activeLayerID).id(session.activeLayerID)
             Divider()
             if let layers = session.document?.layers, !layers.isEmpty {
-                NativeLayerList(session: session)
-            } else {
-                VStack(spacing: 10) {
-                    Image(systemName: "square.3.layers.3d").font(.system(size: 25, weight: .light))
-                    Text("No layers yet").font(.callout.weight(.medium))
-                    Text(session.document == nil ? "Create a canvas or import an image." : "Import an image or add a blank layer.")
-                        .font(.caption).multilineTextAlignment(.center)
+                if session.isFilteringLayers, session.filteredLayerRows.isEmpty {
+                    LayersUnavailableView("No layers match the filter.", systemImage: "line.3.horizontal.decrease.circle.fill") {
+                        Button("Clear All") {
+                            session.clearLayerSearch()
+                            session.clearLayerTypeFilter()
+                        }
+                        .controlSize(.large)
+                    }
+                } else {
+                    NativeLayerList(session: session)
                 }
-                .foregroundStyle(.secondary).padding(16)
-                .frame(maxWidth: .infinity, maxHeight: .infinity)
+            } else {
+                LayersUnavailableView("No layers yet", systemImage: "square.3.layers.3d") {
+                    Text(session.document == nil ? "Create a canvas or import a file." : "Import a file or add a blank layer.")
+                }
             }
             Divider()
             // No spacing: each button's hit area supplies it (8 pt either side makes the 16 pt gap).
@@ -39,6 +41,17 @@ struct LayersPanel: View {
                     .help("Group selected layers (⌘G)").accessibilityLabel("New folder").disabled(!session.layersLookEditable)
                 LayerMaskMenu(session: session)
                 Menu {
+                    // The Image menu's adjustments, then the Filter menu's filters.
+                    ForEach(AdjustmentKind.imageAdjustments, id: \.self) { kind in
+                        Button(L10n.string(kind.rawValue)) { session.addAdjustment(kind) }
+                    }
+                    Divider()
+                    ForEach(AdjustmentKind.filters, id: \.self) { kind in
+                        Button(L10n.string(kind.rawValue)) { session.addAdjustment(kind) }
+                    }
+                } label: { Image(systemName: "circle.lefthalf.filled").footerHitArea() }
+                    .menuStyle(.borderlessButton).fixedSize().help("New adjustment layer").disabled(!session.layersLookEditable)
+                Menu {
                     ForEach(LayerEffectKind.allCases, id: \.self) { kind in
                         Button(L10n.string(kind.rawValue) + "…") { session.addEffect(kind) }
                     }
@@ -46,12 +59,6 @@ struct LayersPanel: View {
                     .menuStyle(.borderlessButton).fixedSize()
                     .help("Add layer effect").accessibilityLabel("Layer effects")
                     .accessibilityIdentifier("layerEffects").disabled(!session.layersLookEditable || session.activeLayer?.isGroup != false || session.activeLayer?.asset == nil)
-                Menu {
-                    ForEach(AdjustmentKind.allCases, id: \.self) { kind in
-                        Button(L10n.string(kind.rawValue)) { session.addAdjustment(kind) }
-                    }
-                } label: { Image(systemName: "circle.lefthalf.filled").footerHitArea() }
-                    .menuStyle(.borderlessButton).fixedSize().help("New adjustment layer").disabled(!session.layersLookEditable)
                 Spacer()
                 Button { session.deleteLayerOrMask() } label: { FooterIcon(systemName: "trash") }
                     .help(session.selectedEffect != nil ? "Delete selected effect" : session.isMaskSelected ? "Delete layer mask" : session.selectedLayerIDs.count > 1 ? "Delete selected layers" : "Delete selected layer")
@@ -68,7 +75,30 @@ struct LayersPanel: View {
             if let id = session.adjustmentEditingID { await session.beginAdjustmentEditing(id) }
         }
     }
+}
 
+/// The panel's empty states: a light icon over a title, with a line or two of detail beneath.
+private struct LayersUnavailableView<Content: View>: View {
+    let title: LocalizedStringKey
+    let systemImage: String
+    @ViewBuilder let content: () -> Content
+
+    init(_ title: LocalizedStringKey, systemImage: String, @ViewBuilder content: @escaping () -> Content) {
+        self.title = title
+        self.systemImage = systemImage
+        self.content = content
+    }
+
+    var body: some View {
+        VStack(spacing: 10) {
+            Image(systemName: systemImage).font(.system(size: 25, weight: .light))
+            Text(title).font(.callout.weight(.medium))
+            content()
+                .font(.caption).multilineTextAlignment(.center)
+        }
+        .foregroundStyle(.secondary).padding(16)
+        .frame(maxWidth: .infinity, maxHeight: .infinity)
+    }
 }
 
 /// A footer button's icon: full strength when the button can be used, and as dim as the footer's menus (Effects,
@@ -96,4 +126,3 @@ extension View {
             .contentShape(Rectangle())
     }
 }
-

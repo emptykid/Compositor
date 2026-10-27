@@ -53,7 +53,7 @@ final class ProjectController {
         catch { await showError("Couldn’t export PNG", error: error) }
     }
 
-    /// File › Export As…: PNG, JPEG or a one-page PDF, at the canvas's size or scaled, previewed first. Export JPEG…
+    /// File › Export As…: still images or animation timelines, sized and previewed first. Export JPEG…
     /// opens it on JPEG.
     func exportAs(start: ExportFormat? = nil) async {
         guard let window, session.document != nil, begin() else { return }
@@ -61,12 +61,19 @@ final class ProjectController {
         guard let snapshot = session.projectSnapshot() else { return }
         do {
             let raster = try await ImageExporter.shared.render(snapshot)
+            // With a 16-bit layer in it, a PNG can be written at 16 bits a channel too.
+            let deepRaster = snapshot.images.values.contains { $0.deep != nil }
+                ? try await ImageExporter.shared.render(snapshot, sixteenBit: true) : nil
+            // With an HDR layer in it, it can go out as an EXR, light brighter than white kept.
+            let hdrRaster = snapshot.images.values.contains { $0.isHDR }
+                ? try await ImageExporter.shared.render(snapshot, sixteenBit: true, hdr: true) : nil
             let chosen: (data: Data, format: ExportFormat)? = await withCheckedContinuation { continuation in
                 let sheet = NSWindow()
                 sheet.styleMask = [.titled, .fullSizeContentView]
                 sheet.title = String(localized: "Export As")
                 sheet.contentViewController = NSHostingController(rootView: ExportAsSheet(
-                    raster: raster, session: session, format: start ?? lastExportFormat) { chosen in
+                    raster: raster, deepRaster: deepRaster, hdrRaster: hdrRaster, snapshot: snapshot, session: session,
+                    format: start ?? lastExportFormat) { chosen in
                     window.endSheet(sheet)
                     sheet.orderOut(nil)
                     // Release the hosted view and its closure after dismissal.
@@ -119,7 +126,7 @@ final class ProjectController {
         guard let options, let snapshot = session.projectSnapshot() else { return }
         do {
             let resized = try await CanvasResizer.shared.resize(snapshot, to: options)
-            session.applyDocumentSize(resized, actionName: "Canvas Size")
+            session.applyDocumentSize(resized, actionName: "Canvas Size", keepingZoom: true)
         } catch { await showError("Couldn’t change canvas size", error: error) }
     }
 
@@ -408,12 +415,18 @@ final class ProjectController {
 
 /// What File › Export As… writes.
 enum ExportFormat: String, CaseIterable {
-    case png = "PNG", jpeg = "JPEG", pdf = "PDF"
+    // In the order Export As lists them: GIF after PDF, as fewer need it.
+    case png = "PNG", jpeg = "JPEG", tiff = "TIFF", pdf = "PDF", gif = "GIF", exr = "EXR"
+    /// Layers packed into a PNG's red, green, blue and alpha, for game textures (see `ChannelPack`).
+    case channelPack = "Channel Pack"
     var type: UTType {
         switch self {
-        case .png: .png
+        case .png, .channelPack: .png
         case .jpeg: .jpeg
+        case .gif: .gif
+        case .tiff: .tiff
         case .pdf: .pdf
+        case .exr: .openEXR
         }
     }
 }

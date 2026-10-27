@@ -19,6 +19,14 @@ struct LocalizationTests {
         #expect(L10n.string("A missing translation", bundle: chinese) == "A missing translation")
     }
 
+    @Test func runtimeLabelsAddedSince1_5Translate() throws {
+        let chinese = try bundle("zh-Hans")
+        #expect(L10n.string(AdjustmentKind.lensEffects.rawValue, bundle: chinese) == "镜头效果")
+        #expect(L10n.string(LensEffect.anamorphicFlare.rawValue, bundle: chinese) == "变形镜头光晕")
+        #expect(L10n.string("Align " + LayerAlignment.left.rawValue, bundle: chinese) == "左边对齐")
+        #expect(L10n.string(ChannelPack.Channel.alpha.rawValue, bundle: chinese) == "Alpha")
+    }
+
     @Test func chineseBlendModeTitlesStillPreviewCommitAndUndo() throws {
         let session = EditorSession()
         session.createDocument(width: 4, height: 4, emptyLayer: true)
