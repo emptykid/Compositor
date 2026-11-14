@@ -75,6 +75,10 @@ xcodebuild -project Compositor.xcodeproj -scheme Compositor -destination 'platfo
 
 本项目不维护独立的功能分支。同步上游时保持核心行为一致，并验证中文显示、命令搜索、混合模式选择、撤销及项目兼容性。
 
+## 相关项目
+
+[PSFlow](https://psflow.io?utm_source=github&utm_medium=readme&utm_campaign=Compositor)：Photoshop 画布延时录制插件。
+
 ## 许可证与致谢
 
 采用 [MIT 许可证](LICENSE)，保留原项目的版权声明。感谢 Robbie Tilton 及所有上游贡献者；本仓库负责简体中文本地化维护。

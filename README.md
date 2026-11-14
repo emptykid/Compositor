@@ -140,6 +140,10 @@ For an explicitly documented, signed but **not notarized** release, set `SKIP_NO
 
 The publish script targets **emptykid/Compositor**, uses the Sparkle signing key stored under account `emptykid.Compositor`, uploads a draft release, publishes this fork’s `appcast.xml`, and then makes the release public. Commit and push all source and documentation changes before publishing.
 
+## Related projects
+
+[PSFlow](https://psflow.io?utm_source=github&utm_medium=readme&utm_campaign=Compositor) – record a timelapse of your Photoshop canvas.
+
 ## License
 
 MIT — see [LICENSE](LICENSE). The original application is by [Robbie Tilton and upstream contributors](https://github.com/robbietilton/Compositor). This fork maintains the Simplified Chinese localization.
